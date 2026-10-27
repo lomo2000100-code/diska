@@ -99,14 +99,41 @@ if (me) {
 
       <div class="order-info">
         <div class="info-block"><div class="k">Смета ИИ</div><div class="v">${est}</div></div>
+        <div class="info-block"><div class="k">Бюджет клиента</div><div class="v">${fmtPrice(o.answers?.budget)}</div></div>
         <div class="info-block"><div class="k">Оценка срока ИИ</div><div class="v">${days}</div></div>
         <div class="info-block"><div class="k">Цена для клиента</div><div class="v">${fmtPrice(o.priceFinal)}</div></div>
         <div class="info-block"><div class="k">Старт / дедлайн</div><div class="v">${fmtDate(o.startDate)} / ${fmtDate(o.deadline)}</div></div>
       </div>
 
       <div class="admin-note"><b>Параметры заказа</b><div style="display:grid;gap:2px;font-size:13.5px">${summary}</div></div>
+
+      ${o.prompt ? `
+      <div class="prompt-block">
+        <div class="prompt-head">
+          <b>Промт для генерации сайта в ИИ</b>
+          <button class="btn btn-sm" onclick='copyPrompt(this)' data-prompt="${escapeHtml(o.prompt).replace(/"/g, '&quot;')}">
+            <span data-icon="copy" data-size="14"></span>Копировать
+          </button>
+        </div>
+        <pre class="prompt-text">${escapeHtml(o.prompt)}</pre>
+      </div>` : ''}
+
       ${o.adminComment ? `<div class="admin-note"><b>Ваш комментарий</b>${escapeHtml(o.adminComment)}</div>` : ''}
       ${o.rejectReason ? `<div class="admin-note" style="border-left-color:#e5484d"><b>Причина отказа</b>${escapeHtml(o.rejectReason)}</div>` : ''}
+
+      <div class="deliverable-block">
+        ${o.deliverable ? `
+          <div class="deliverable-card">
+            <span data-icon="archive" data-size="20"></span>
+            <div class="att-meta"><b>${escapeHtml(o.deliverable.originalName)}</b><small>${fmtSize(o.deliverable.size)} · загружен ${fmtDateTime(o.deliverable.createdAt)}</small></div>
+            <a class="btn btn-sm" href="/api/orders/${o.id}/deliverable?token=${encodeURIComponent(API.token || '')}" target="_blank"><span data-icon="download" data-size="14"></span>Скачать</a>
+            <button class="btn btn-sm btn-danger" onclick="removeDeliverable(${o.id})"><span data-icon="x" data-size="14"></span></button>
+          </div>` : ''}
+        <button class="btn btn-sm btn-primary" onclick="document.getElementById('dlFile-${o.id}').click()">
+          <span data-icon="archive" data-size="15"></span>${o.deliverable ? 'Заменить ZIP с сайтом' : 'Прикрепить готовый сайт (ZIP)'}
+        </button>
+        <input type="file" id="dlFile-${o.id}" style="display:none" onchange="uploadDeliverable(event, ${o.id})">
+      </div>
 
       <div class="order-actions">
         ${actions}
@@ -115,6 +142,38 @@ if (me) {
       <div id="chatWrap-${o.id}" style="display:none;margin-top:14px"></div>
     </div>`;
   }
+
+  /* ---- Промт: копирование ---- */
+  window.copyPrompt = function (btn) {
+    copyText(btn.dataset.prompt);
+  };
+
+  /* ---- Выдача готового ZIP ---- */
+  window.uploadDeliverable = async function (e, id) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) return toast('Файл больше 25 МБ');
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      await API.post(`/api/orders/${id}/deliverable`, { file: { name: file.name, dataUrl } });
+      toast('ZIP прикреплён — клиент может скачать его в заказе');
+      loadAll();
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
+  window.removeDeliverable = async function (id) {
+    if (!confirm('Убрать файл выдачи? Клиент перестанет его видеть.')) return;
+    try {
+      await API.del(`/api/orders/${id}/deliverable`);
+      toast('Файл удалён');
+      loadAll();
+    } catch (err) {
+      toast(err.message);
+    }
+  };
 
   /* ---- Принятие заказа ---- */
   window.openAccept = function (id) {
@@ -192,10 +251,16 @@ if (me) {
         <div class="chat">
           <div class="chat-box" id="chatBox"><div class="chat-empty">Загрузка…</div></div>
           <form class="chat-form" onsubmit="sendMessage(event)">
-            <input class="input" id="chatInput" placeholder="Ответить клиенту…" autocomplete="off">
+            <button type="button" class="icon-btn chat-attach" title="Прикрепить файл" onclick="document.getElementById('chatFile').click()">
+              <span data-icon="paperclip" data-size="17"></span>
+            </button>
+            <input type="file" id="chatFile" style="display:none" onchange="sendFile(event)">
+            <input class="input" id="chatInput" placeholder="Ответить клиенту или прикрепить файл…" autocomplete="off">
             <button class="btn btn-primary btn-sm" type="submit">Отправить</button>
           </form>
+          <div class="chat-hint">Файлы любого типа до 25 МБ: фото, макеты, архивы, ТЗ</div>
         </div>`;
+      iconify(wrap);
       loadMessages(id);
     } else {
       wrap.style.display = 'none';
@@ -218,6 +283,22 @@ if (me) {
     }
   };
 
+  window.sendFile = async function (e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) return toast('Файл больше 25 МБ');
+    const id = Number(e.target.closest('.order-card').dataset.id);
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      await API.post(`/api/orders/${id}/messages`, { text: '', attachment: { name: file.name, dataUrl } });
+      toast('Файл отправлен клиенту');
+      loadMessages(id);
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
   async function loadMessages(id) {
     if (!openChats.has(id)) return;
     try {
@@ -232,10 +313,12 @@ if (me) {
         const mine = m.senderRole === 'admin';
         return `<div class="chat-msg ${mine ? 'out' : 'in'}">
           ${mine ? '' : `<div class="who">${escapeHtml(m.senderName)}</div>`}
-          ${escapeHtml(m.text)}
+          ${m.text ? `<div class="msg-text">${escapeHtml(m.text)}</div>` : ''}
+          ${m.attachment ? attachmentHtml(m.attachment, id, m.id) : ''}
           <div class="time">${fmtDateTime(m.createdAt)}</div>
         </div>`;
       }).join('');
+      iconify(box);
       box.scrollTop = box.scrollHeight;
     } catch (e) { /* тихо */ }
   }

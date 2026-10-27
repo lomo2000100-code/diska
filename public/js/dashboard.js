@@ -115,6 +115,11 @@ if (me) {
           <p style="font-size:14px">${escapeHtml(myReview.text)}</p>
         </div>` : ''}
 
+      ${o.deliverable ? `
+        <a class="btn btn-sm btn-primary deliverable-btn" href="/api/orders/${o.id}/deliverable?token=${encodeURIComponent(API.token || '')}" target="_blank" rel="noopener">
+          <span data-icon="archive" data-size="15"></span>Скачать готовый сайт (ZIP) · ${fmtSize(o.deliverable.size)}
+        </a>` : ''}
+
       <div class="order-actions">
         <button class="btn btn-sm" onclick="toggleChat(${o.id})"><span data-icon="chat" data-size="15"></span>Чат по заказу</button>
         ${o.status === 'completed' && !myReview ? `<button class="btn btn-sm btn-primary btn-review" onclick="openReviewModal(${o.id})"><span data-icon="star" data-size="14" data-solid="1"></span>Оставить отзыв</button>` : ''}
@@ -194,11 +199,16 @@ if (me) {
   function chatTemplate() {
     return `
       <div class="chat">
-        <div class="chat-box" id="chatBox"><div class="chat-empty">Сообщений пока нет — напишите первым</div></div>
+        <div class="chat-box" id="chatBox"><div class="chat-empty">Сообщений пока нет — напишите первым или прикрепите файл</div></div>
         <form class="chat-form" onsubmit="sendMessage(event)">
-          <input class="input" id="chatInput" placeholder="Ваше сообщение…" autocomplete="off">
+          <button type="button" class="icon-btn chat-attach" title="Прикрепить файл любого типа" onclick="document.getElementById('chatFile').click()">
+            <span data-icon="paperclip" data-size="17"></span>
+          </button>
+          <input type="file" id="chatFile" style="display:none" onchange="sendFile(event)">
+          <input class="input" id="chatInput" placeholder="Сообщение или файл…" autocomplete="off">
           <button class="btn btn-primary btn-sm" type="submit">Отправить</button>
         </form>
+        <div class="chat-hint">Можно прикрепить фото, архив, макет, ТЗ — файлы до 25 МБ</div>
       </div>`;
   }
 
@@ -212,6 +222,26 @@ if (me) {
     input.value = '';
     try {
       await API.post(`/api/orders/${id}/messages`, { text });
+      loadMessages(id);
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
+  window.sendFile = async function (e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) return toast('Файл больше 25 МБ');
+    const card = e.target.closest('.order-card');
+    const id = Number(card.dataset.id);
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      await API.post(`/api/orders/${id}/messages`, {
+        text: '',
+        attachment: { name: file.name, dataUrl }
+      });
+      toast('Файл отправлен');
       loadMessages(id);
     } catch (err) {
       toast(err.message);
@@ -232,10 +262,12 @@ if (me) {
         const mine = m.senderRole === 'client';
         return `<div class="chat-msg ${mine ? 'out' : 'in'}">
           ${mine ? '' : `<div class="who">${escapeHtml(m.senderName)}</div>`}
-          ${escapeHtml(m.text)}
+          ${m.text ? `<div class="msg-text">${escapeHtml(m.text)}</div>` : ''}
+          ${m.attachment ? attachmentHtml(m.attachment, id, m.id) : ''}
           <div class="time">${fmtDateTime(m.createdAt)}</div>
         </div>`;
       }).join('');
+      iconify(box);
       box.scrollTop = box.scrollHeight;
     } catch (e) { /* тихо */ }
   }

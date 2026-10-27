@@ -1,4 +1,4 @@
-/* ============ ИИ-помощник: диалог расчёта стоимости ============ */
+/* ============ ИИ-помощник: расширенный диалог расчёта ============ */
 
 const Assistant = (() => {
   const panel = () => document.getElementById('aiPanel');
@@ -9,7 +9,7 @@ const Assistant = (() => {
   const QUESTIONS = [
     {
       key: 'type',
-      q: 'Привет! Я помогу рассчитать стоимость сайта. Какая задача перед нами стоит?',
+      q: 'Привет! Я соберу техническое задание и рассчитаю стоимость. Какая задача перед нами стоит?',
       options: [
         { v: 'landing', t: 'Лендинг' },
         { v: 'corporate', t: 'Сайт компании' },
@@ -17,6 +17,18 @@ const Assistant = (() => {
         { v: 'webapp', t: 'Веб-сервис / приложение' },
         { v: 'portfolio', t: 'Портфолио' }
       ]
+    },
+    {
+      key: 'niche',
+      input: true,
+      placeholder: 'Например: кофейня, юрист, магазин одежды…',
+      q: 'О чём сайт? Напишите тематику или нишу бизнеса своими словами.'
+    },
+    {
+      key: 'products',
+      input: true,
+      placeholder: 'Например: авторские десерты и кофе навынос…',
+      q: 'Какая у вас продукция или услуги? Перечислите главное.'
     },
     {
       key: 'pages',
@@ -38,9 +50,29 @@ const Assistant = (() => {
       ]
     },
     {
+      key: 'colorTheme',
+      q: 'Какой фон и цветовая тема ближе?',
+      options: [
+        { v: 'dark', t: 'Тёмная тема фона' },
+        { v: 'light', t: 'Светлая тема фона' },
+        { v: 'brand', t: 'Фирменные цвета бренда' },
+        { v: 'mono', t: 'Чёрно-белый минимализм' }
+      ]
+    },
+    {
+      key: 'animations',
+      q: 'Нужны ли анимации?',
+      options: [
+        { v: 'none', t: 'Без анимаций' },
+        { v: 'light', t: 'Лёгкие микроанимации' },
+        { v: 'parallax', t: 'Параллакс и скролл-эффекты' },
+        { v: 'rich', t: 'Богатые анимации и интерактив' }
+      ]
+    },
+    {
       key: 'features',
-      q: 'Какие функции нужны? Можно выбрать несколько, затем нажмите «Продолжить».',
       multi: true,
+      q: 'Какие функции нужны? Можно выбрать несколько, затем нажмите «Продолжить».',
       options: [
         { v: 'forms', t: 'Формы заявок' },
         { v: 'catalog', t: 'Каталог и корзина' },
@@ -64,15 +96,12 @@ const Assistant = (() => {
   ];
 
   function reset() {
-    state = { step: 0, answers: { features: [] }, done: false };
+    state = { step: 0, answers: { features: [] }, done: false, estimate: null, budgetMode: false };
     body().innerHTML = '';
     inputRow().style.display = 'none';
   }
 
-  function scrollDown() {
-    const b = body();
-    b.scrollTop = b.scrollHeight;
-  }
+  const scrollDown = () => { body().scrollTop = body().scrollHeight; };
 
   function addMsg(html, cls = 'bot') {
     const el = document.createElement('div');
@@ -92,8 +121,11 @@ const Assistant = (() => {
     return el;
   }
 
-  function askQuestion() {
-    const q = QUESTIONS[state.step];
+  function disableChoices(wrap) {
+    wrap.querySelectorAll('.choice').forEach(c => { c.disabled = true; c.style.opacity = '.55'; });
+  }
+
+  function askChoices(q) {
     addMsg(escapeHtml(q.q));
     const wrap = document.createElement('div');
     wrap.className = 'choices';
@@ -109,11 +141,11 @@ const Assistant = (() => {
           const i = arr.indexOf(opt.v);
           if (i >= 0) arr.splice(i, 1); else arr.push(opt.v);
         } else {
+          disableChoices(wrap);
           state.answers[q.key] = opt.v;
-          wrap.querySelectorAll('.choice').forEach(c => c.disabled = true);
           addMsg(opt.t, 'user');
           state.step++;
-          setTimeout(run, 350);
+          setTimeout(run, 300);
         }
       };
       wrap.appendChild(b);
@@ -125,11 +157,12 @@ const Assistant = (() => {
       next.style.borderStyle = 'dashed';
       next.textContent = 'Продолжить →';
       next.onclick = () => {
-        wrap.querySelectorAll('.choice').forEach(c => c.disabled = true);
-        const picked = state.answers.features.map(v => q.options.find(o => o.v === v).t).join(', ');
+        disableChoices(wrap);
+        const picked = state.answers.features
+          .map(v => q.options.find(o => o.v === v)?.t).filter(Boolean).join(', ');
         addMsg(picked || 'Без дополнительных функций', 'user');
         state.step++;
-        setTimeout(run, 350);
+        setTimeout(run, 300);
       };
       wrap.appendChild(next);
     }
@@ -137,38 +170,114 @@ const Assistant = (() => {
     scrollDown();
   }
 
+  function askInput(q) {
+    addMsg(escapeHtml(q.q));
+    inputRow().style.display = 'flex';
+    const input = document.getElementById('aiTextInput');
+    input.placeholder = q.placeholder || 'Ваш ответ…';
+    input.value = '';
+    input.focus();
+    const send = () => {
+      const val = input.value.trim();
+      if (val.length < 2) { input.focus(); return; }
+      addMsg(escapeHtml(val), 'user');
+      state.answers[q.key] = val.slice(0, 300);
+      inputRow().style.display = 'none';
+      input.placeholder = 'Опишите задачу своими словами…';
+      state.step++;
+      setTimeout(run, 300);
+    };
+    document.getElementById('aiSendBtn').onclick = send;
+    input.onkeydown = e => { if (e.key === 'Enter') send(); };
+  }
+
   async function showEstimate() {
     const t = addTyping();
-    let est;
     try {
-      est = await API.post('/api/assistant/estimate', state.answers);
+      state.estimate = await API.post('/api/assistant/estimate', state.answers);
     } catch (e) {
       t.remove();
       addMsg('Не удалось рассчитать смету: ' + e.message);
       return;
     }
     t.remove();
-    state.estimate = est;
+    const est = state.estimate;
     const el = document.createElement('div');
     el.className = 'msg estimate';
     el.innerHTML = `
-      <b>Готово! Ориентировочная смета:</b>
+      <b>Смета по вашим ответам:</b>
       <div class="est-price">${fmtPrice(est.priceMin)} — ${fmtPrice(est.priceMax)}</div>
-      <div class="est-meta">Примерный срок разработки: ~${est.approxDays} раб. дней. Точную цену и даты подтвердит специалист после оформления.</div>
-      <div class="est-list">${est.summary.map(s => `· ${escapeHtml(s)}`).join('')}</div>
-      <button class="btn btn-primary btn-block btn-sm" id="createOrderBtn">Оформить заказ</button>
-      <button class="btn btn-block btn-sm" style="margin-top:8px" id="restartBtn">Пройти заново</button>`;
+      <div class="est-meta">Примерный срок: ~${est.approxDays} раб. дней. Ниже минимальной суммы проект взять не получится.</div>
+      <div class="est-list">${est.summary.map(s => `· ${escapeHtml(s)}`).join('')}</div>`;
     body().appendChild(el);
-    el.querySelector('#restartBtn').onclick = () => { reset(); run(); };
-    el.querySelector('#createOrderBtn').onclick = createOrder;
     scrollDown();
   }
 
-  async function createOrder() {
+  function askBudget() {
+    const est = state.estimate;
+    const opt = Math.round((est.priceMin + est.priceMax) / 2 / 1000) * 1000;
+    addMsg(`На какую сумму вы рассчитываете? Минимальный порог по этому ТЗ — <b>${fmtPrice(est.priceMin)}</b>.`);
+    const wrap = document.createElement('div');
+    wrap.className = 'choices';
+    const tiers = [
+      { v: est.priceMin, t: `Минимум — ${fmtPrice(est.priceMin)}` },
+      { v: opt, t: `Оптимум — ${fmtPrice(opt)}` },
+      { v: est.priceMax, t: `Максимум — ${fmtPrice(est.priceMax)}` },
+      { v: 'custom', t: 'Своя сумма' }
+    ];
+    tiers.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'choice';
+      b.textContent = o.t;
+      b.onclick = () => {
+        if (o.v === 'custom') {
+          disableChoices(wrap);
+          customBudget();
+        } else {
+          disableChoices(wrap);
+          state.answers.budget = o.v;
+          addMsg(o.t, 'user');
+          setTimeout(finish, 300);
+        }
+      };
+      wrap.appendChild(b);
+    });
+    body().appendChild(wrap);
+    scrollDown();
+  }
+
+  function customBudget() {
+    addMsg('Введите сумму в рублях одним числом (например, 50000).');
+    inputRow().style.display = 'flex';
+    const input = document.getElementById('aiTextInput');
+    input.placeholder = 'Сумма в рублях…';
+    input.value = '';
+    input.focus();
+    const send = () => {
+      const val = parseInt(input.value.replace(/\D/g, ''), 10);
+      if (!val || val <= 0) { addMsg('Введите положительное число.'); input.focus(); return; }
+      if (val < state.estimate.priceMin) {
+        addMsg(String(val.toLocaleString('ru-RU')) + ' ₽', 'user');
+        addMsg(`Не получится: минимум по вашим требованиям — ${fmtPrice(state.estimate.priceMin)}. Можно уменьшить функции или упростить дизайн, либо подтвердить минимальную сумму. Введите сумму ещё раз.`);
+        input.value = '';
+        input.focus();
+        return;
+      }
+      addMsg(fmtPrice(val), 'user');
+      state.answers.budget = val;
+      inputRow().style.display = 'none';
+      input.placeholder = 'Опишите задачу своими словами…';
+      setTimeout(finish, 300);
+    };
+    document.getElementById('aiSendBtn').onclick = send;
+    input.onkeydown = e => { if (e.key === 'Enter') send(); };
+  }
+
+  async function finish() {
     if (!Auth.user) {
-      addMsg('Чтобы оформить заказ, нужно войти или зарегистрироваться — это займёт минуту. После входа я сразу отправлю заказ.');
+      addMsg('Чтобы оформить заказ, нужно войти или зарегистрироваться — это займёт минуту. После входя я сразу отправлю заказ с готовым промтом.');
       openModal('registerModal');
-      sessionStorage.setItem('pendingOrder', JSON.stringify(state.answers));
+      sessionStorage.setItem('pendingOrder', JSON.stringify({ answers: state.answers, estimate: state.estimate }));
       return;
     }
     const t = addTyping();
@@ -180,14 +289,14 @@ const Assistant = (() => {
         estimate: state.estimate
       });
       t.remove();
-      addMsg(`Заказ #${order.id} оформлен и отправлен специалисту. Можете сразу открыть чат по заказу и написать детали — я отвечу в этом же диалоге.`);
+      state.done = true;
+      addMsg(`Заказ #${order.id} оформлен. Специалист получит готовый промт и смету, подтвердит сроки. Можете сразу открыть чат по заказу и прикрепить файлы — фото, референсы, макеты.`);
       const el = document.createElement('div');
       el.className = 'choices';
       el.innerHTML = `
         <a class="choice selected" href="/dashboard.html?order=${order.id}&chat=1">Перейти в чат заказа</a>
         <a class="choice" href="/dashboard.html">Мои заказы</a>`;
       body().appendChild(el);
-      state.done = true;
       inputRow().style.display = 'none';
       scrollDown();
     } catch (e) {
@@ -196,29 +305,12 @@ const Assistant = (() => {
     }
   }
 
-  function askFreeText() {
-    addMsg('Расскажите в двух словах о проекте — или просто напишите «старт», и я задам несколько коротких вопросов для точного расчёта.');
-    inputRow().style.display = 'flex';
-    const input = document.getElementById('aiTextInput');
-    input.focus();
-    const send = () => {
-      const val = input.value.trim();
-      if (!val) return;
-      addMsg(escapeHtml(val), 'user');
-      input.value = '';
-      inputRow().style.display = 'none';
-      state.step = 0;
-      setTimeout(run, 350);
-    };
-    document.getElementById('aiSendBtn').onclick = send;
-    input.onkeydown = e => { if (e.key === 'Enter') send(); };
-  }
-
   function run() {
     if (state.step < QUESTIONS.length) {
-      askQuestion();
-    } else {
-      showEstimate();
+      const q = QUESTIONS[state.step];
+      q.input ? askInput(q) : askChoices(q);
+    } else if (!state.estimate) {
+      showEstimate().then(() => askBudget());
     }
   }
 
@@ -228,7 +320,22 @@ const Assistant = (() => {
       document.getElementById('aiFab').style.display = 'none';
       if (!state || state.done) {
         reset();
-        askFreeText();
+        addMsg('Расскажите о проекте — или напишите «старт», и я задам несколько коротких вопросов для точного расчёта.');
+        inputRow().style.display = 'flex';
+        const input = document.getElementById('aiTextInput');
+        input.placeholder = 'Опишите задачу своими словами…';
+        input.value = '';
+        input.focus();
+        const send = () => {
+          const val = input.value.trim();
+          if (!val) return;
+          addMsg(escapeHtml(val), 'user');
+          inputRow().style.display = 'none';
+          state.step = 0;
+          setTimeout(run, 300);
+        };
+        document.getElementById('aiSendBtn').onclick = send;
+        input.onkeydown = e => { if (e.key === 'Enter') send(); };
       }
     },
     close() {
@@ -239,10 +346,11 @@ const Assistant = (() => {
       const pending = sessionStorage.getItem('pendingOrder');
       if (!pending) return;
       sessionStorage.removeItem('pendingOrder');
+      const { answers, estimate } = JSON.parse(pending);
       this.open();
       inputRow().style.display = 'none';
-      state = { step: QUESTIONS.length, answers: JSON.parse(pending), done: false };
-      await showEstimate();
+      state = { step: QUESTIONS.length, answers, estimate, done: false, estimate };
+      await finish();
     }
   };
 })();

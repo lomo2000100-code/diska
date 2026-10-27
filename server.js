@@ -7,8 +7,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = 'diska-secret-key-change-me-2026';
 const DATA_FILE = path.join(__dirname, 'data', 'db.json');
+const UPLOAD_DIR = path.join(__dirname, 'data', 'uploads');
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 МБ — файлы любого типа
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '40mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Health-check для хостинга (Render и аналоги)
@@ -65,7 +68,8 @@ function signToken(user) {
 
 function auth(req, res, next) {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  // токен из query — для прямых ссылок на скачивание файлов (<a href>)
+  const token = header.startsWith('Bearer ') ? header.slice(7) : (req.query.token || null);
   if (!token) return res.status(401).json({ error: 'Требуется авторизация' });
   const [body, sig] = token.split('.');
   if (!body || !sig) return res.status(401).json({ error: 'Неверный токен' });
@@ -226,6 +230,18 @@ const PRICING = {
     fast: { label: 'Срочно (быстрее обычного)', multiplier: 1.5, daysMult: 0.6 },
     normal: { label: 'Обычные сроки', multiplier: 1, daysMult: 1 },
     relaxed: { label: 'Не спеша', multiplier: 0.85, daysMult: 1.3 }
+  },
+  animations: {
+    none: { label: 'Без анимаций', add: 0, days: 0 },
+    light: { label: 'Лёгкие микроанимации', add: 5000, days: 1 },
+    parallax: { label: 'Параллакс и скролл-эффекты', add: 12000, days: 3 },
+    rich: { label: 'Богатые анимации и интерактив', add: 25000, days: 7 }
+  },
+  colorTheme: {
+    dark: 'Тёмная тема фона',
+    light: 'Светлая тема фона',
+    brand: 'Фирменные цвета бренда',
+    mono: 'Чёрно-белый минимализм'
   }
 };
 
@@ -237,6 +253,7 @@ app.post('/api/assistant/estimate', (req, res) => {
   const design = PRICING.design[a.design] || PRICING.design.template;
   const urgency = PRICING.urgency[a.urgency] || PRICING.urgency.normal;
   const feats = Array.isArray(a.features) ? a.features.filter(f => PRICING.features[f]) : [];
+  const anim = PRICING.animations[a.animations] || PRICING.animations.none;
 
   let price = t.base;
   let days = t.days;
@@ -244,6 +261,8 @@ app.post('/api/assistant/estimate', (req, res) => {
   days += Math.max(0, pages - 1);
   price += design.add;
   days += design.days;
+  price += anim.add;
+  days += anim.days;
   feats.forEach(f => { price += PRICING.features[f].add; days += PRICING.features[f].days; });
   price = price * urgency.multiplier;
   days = Math.max(3, Math.round(days * urgency.daysMult));
@@ -252,19 +271,52 @@ app.post('/api/assistant/estimate', (req, res) => {
   const max = round1000(price * 1.15);
   const summary = [
     `Тип: ${t.label}`,
+    a.niche ? `Тематика: ${String(a.niche).slice(0, 120)}` : null,
+    a.products ? `Продукция/услуги: ${String(a.products).slice(0, 120)}` : null,
     `Страниц: ~${pages}`,
     `Дизайн: ${design.label}`,
+    `Фон/тема: ${PRICING.colorTheme[a.colorTheme] || 'Не указано'}`,
+    `Анимации: ${anim.label}`,
     feats.length ? `Функции: ${feats.map(f => PRICING.features[f].label).join(', ')}` : 'Без доп. функций',
-    `Сроки: ${urgency.label}`
-  ];
+    `Сроки: ${urgency.label}`,
+    a.budget ? `Бюджет клиента: ${Number(a.budget).toLocaleString('ru-RU')} ₽` : null
+  ].filter(Boolean);
   res.json({ priceMin: min, priceMax: max, approxDays: days, summary });
 });
+
+/* ---------------- Промт для генерации сайта в ИИ ---------------- */
+
+function buildPrompt(answers, estimate) {
+  const t = PRICING.type[answers.type]?.label || 'Сайт';
+  const lines = [
+    `ЗАДАЧА: разработать веб-сайт — ${t}.`,
+    answers.niche ? `ТЕМАТИКА/НИША: ${answers.niche}.` : null,
+    answers.products ? `ПРОДУКЦИЯ И УСЛУГИ: ${answers.products}.` : null,
+    `ОБЪЁМ: ориентировочно ${PRICING.pages[answers.pages] || 1} страниц(ы).`,
+    `ДИЗАЙН: ${PRICING.design[answers.design]?.label || 'шаблонный'}.`,
+    `ФОН И ЦВЕТОВАЯ ТЕМА: ${PRICING.colorTheme[answers.colorTheme] || 'на усмотрение дизайнера'}.`,
+    `АНИМАЦИИ: ${PRICING.animations[answers.animations]?.label || 'без анимаций'}.`,
+    Array.isArray(answers.features) && answers.features.length
+      ? `НУЖНЫЙ ФУНКЦИОНАЛ: ${answers.features.map(f => PRICING.features[f]?.label).filter(Boolean).join('; ')}.`
+      : 'ДОПОЛНИТЕЛЬНЫЙ ФУНКЦИОНАЛ: не требуется.',
+    estimate ? `ОРИЕНТИР ПО СРОКУ: ${estimate.approxDays} рабочих дней.` : null,
+    answers.budget ? `БЮДЖЕТ КЛИЕНТА: ${Number(answers.budget).toLocaleString('ru-RU')} ₽ (нижняя граница по смете: ${estimate?.priceMin?.toLocaleString('ru-RU')} ₽).` : null,
+    '',
+    'ТРЕБОВАНИЯ К РЕЗУЛЬТАТУ: адаптивная вёрстка под мобильные и десктоп, современный минималистичный UI, чёткая структура и призывы к действию, чистый HTML/CSS/JS, готовый к размещению на хостинге. Отдай результат набором файлов для упаковки в ZIP.'
+  ].filter(Boolean);
+  return lines.join('\n');
+}
 
 /* ---------------- Заказы ---------------- */
 
 app.post('/api/orders', auth, (req, res) => {
   const { title, brief, answers, estimate } = req.body || {};
   if (!answers || !answers.type) return res.status(400).json({ error: 'Не заполнен бриф ИИ-помощника' });
+  // Бюджет не может быть ниже рассчитанного минимума
+  if (answers.budget && estimate?.priceMin && Number(answers.budget) < estimate.priceMin) {
+    return res.status(400).json({ error: `Бюджет ниже минимальной стоимости: ${estimate.priceMin.toLocaleString('ru-RU')} ₽` });
+  }
+  const prompt = buildPrompt(answers, estimate || null);
   const order = {
     id: ++db.counters.order,
     userId: req.user.id,
@@ -272,6 +324,8 @@ app.post('/api/orders', auth, (req, res) => {
     brief: String(brief || '').slice(0, 2000),
     answers,
     estimate: estimate || null,
+    prompt,
+    deliverable: null, // готовый сайт: { storedName, originalName, size, mime, createdAt }
     status: 'new', // new | accepted | rejected | completed
     priceFinal: null,
     startDate: null,
@@ -327,12 +381,32 @@ app.patch('/api/orders/:id', auth, adminOnly, (req, res) => {
   res.json(order);
 });
 
+/* ---------------- Файлы (любого типа) ---------------- */
+
+function saveBase64File(dataUrl, originalName) {
+  const m = /^data:([^;]+);base64,(.*)$/s.exec(String(dataUrl || ''));
+  if (!m) throw new Error('Некорректный файл');
+  const mime = m[1].slice(0, 100);
+  const buffer = Buffer.from(m[2], 'base64');
+  if (buffer.length === 0) throw new Error('Пустой файл');
+  if (buffer.length > MAX_UPLOAD_BYTES) throw new Error('Файл больше 25 МБ');
+  const safeName = String(originalName || 'file').replace(/[^\w.\-а-яё ]+/gi, '_').slice(-90) || 'file';
+  const ext = path.extname(safeName) || '';
+  const stored = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, stored), buffer);
+  return { storedName: stored, originalName: safeName, size: buffer.length, mime };
+}
+
+function orderAccess(order, user) {
+  return user.role === 'admin' || order.userId === user.id;
+}
+
 /* ---------------- Чат по заказу ---------------- */
 
 app.get('/api/orders/:id/messages', auth, (req, res) => {
   const order = db.orders.find(o => o.id === Number(req.params.id));
   if (!order) return res.status(404).json({ error: 'Заказ не найден' });
-  if (req.user.role !== 'admin' && order.userId !== req.user.id) return res.status(403).json({ error: 'Нет доступа' });
+  if (!orderAccess(order, req.user)) return res.status(403).json({ error: 'Нет доступа' });
   const msgs = db.messages.filter(m => m.orderId === order.id).sort((a, b) => a.id - b.id);
   res.json(msgs);
 });
@@ -340,9 +414,18 @@ app.get('/api/orders/:id/messages', auth, (req, res) => {
 app.post('/api/orders/:id/messages', auth, (req, res) => {
   const order = db.orders.find(o => o.id === Number(req.params.id));
   if (!order) return res.status(404).json({ error: 'Заказ не найден' });
-  if (req.user.role !== 'admin' && order.userId !== req.user.id) return res.status(403).json({ error: 'Нет доступа' });
+  if (!orderAccess(order, req.user)) return res.status(403).json({ error: 'Нет доступа' });
   const text = String(req.body?.text || '').trim();
-  if (!text) return res.status(400).json({ error: 'Пустое сообщение' });
+  const attachmentSrc = req.body?.attachment;
+  let attachment = null;
+  if (attachmentSrc?.dataUrl) {
+    try {
+      attachment = saveBase64File(attachmentSrc.dataUrl, attachmentSrc.name);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+  }
+  if (!text && !attachment) return res.status(400).json({ error: 'Пустое сообщение' });
   const msg = {
     id: ++db.counters.message,
     orderId: order.id,
@@ -350,11 +433,58 @@ app.post('/api/orders/:id/messages', auth, (req, res) => {
     senderRole: req.user.role,
     senderName: req.user.name,
     text: text.slice(0, 2000),
+    attachment,
     createdAt: now()
   };
   db.messages.push(msg);
   saveDB(db);
   res.json(msg);
+});
+
+// Скачивание вложения из чата (доступ только участникам заказа)
+app.get('/api/orders/:id/messages/:msgId/download', auth, (req, res) => {
+  const order = db.orders.find(o => o.id === Number(req.params.id));
+  if (!order) return res.status(404).json({ error: 'Заказ не найден' });
+  if (!orderAccess(order, req.user)) return res.status(403).json({ error: 'Нет доступа' });
+  const msg = db.messages.find(m => m.id === Number(req.params.msgId) && m.orderId === order.id);
+  if (!msg?.attachment) return res.status(404).json({ error: 'Файл не найден' });
+  const fp = path.join(UPLOAD_DIR, msg.attachment.storedName);
+  if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Файл отсутствует на сервере' });
+  res.download(fp, msg.attachment.originalName);
+});
+
+/* ---------------- Выдача готового сайта (ZIP) ---------------- */
+
+app.post('/api/orders/:id/deliverable', auth, adminOnly, (req, res) => {
+  const order = db.orders.find(o => o.id === Number(req.params.id));
+  if (!order) return res.status(404).json({ error: 'Заказ не найден' });
+  const src = req.body?.file;
+  if (!src?.dataUrl) return res.status(400).json({ error: 'Файл не передан' });
+  try {
+    order.deliverable = { ...saveBase64File(src.dataUrl, src.name || 'site.zip'), createdAt: now() };
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+  saveDB(db);
+  res.json(order.deliverable);
+});
+
+app.get('/api/orders/:id/deliverable', auth, (req, res) => {
+  const order = db.orders.find(o => o.id === Number(req.params.id));
+  if (!order) return res.status(404).json({ error: 'Заказ не найден' });
+  if (!orderAccess(order, req.user)) return res.status(403).json({ error: 'Нет доступа' });
+  if (!order.deliverable) return res.status(404).json({ error: 'Готовый файл ещё не загружен' });
+  const fp = path.join(UPLOAD_DIR, order.deliverable.storedName);
+  if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Файл отсутствует на сервере' });
+  res.download(fp, order.deliverable.originalName);
+});
+
+app.delete('/api/orders/:id/deliverable', auth, adminOnly, (req, res) => {
+  const order = db.orders.find(o => o.id === Number(req.params.id));
+  if (!order) return res.status(404).json({ error: 'Заказ не найден' });
+  order.deliverable = null;
+  saveDB(db);
+  res.json({ ok: true });
 });
 
 /* ---------------- Админ: клиенты и модерация ---------------- */
@@ -393,6 +523,18 @@ app.get('*', (req, res, next) => {
   const file = path.join(__dirname, 'public', req.path === '/' ? 'index.html' : req.path);
   if (fs.existsSync(file) && fs.statSync(file).isFile()) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Единый JSON-обработчик ошибок (в т.ч. превышение размера файла)
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Файл слишком большой. Максимум — 25 МБ.' });
+  }
+  if (err instanceof SyntaxError) {
+    return res.status(400).json({ error: 'Некорректный формат запроса' });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Внутренняя ошибка сервера' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
