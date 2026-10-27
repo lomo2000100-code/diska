@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>diska — создаём сайты, которые продают</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='black'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='38' font-weight='bold' fill='white' text-anchor='middle'%3Ed%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Шапка -->
+<header class="header">
+  <div class="container nav">
+    <a class="logo" href="/"><span class="logo-mark">d</span>diska</a>
+    <nav class="nav-links">
+      <a href="#pricing">Тарифы</a>
+      <a href="#how">Как работаем</a>
+      <a href="#reviews">Отзывы</a>
+    </nav>
+    <div class="nav-actions" id="navSlot"></div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="container hero-inner">
+    <div class="badge reveal"><span class="dot"></span> Берём в работу 3 новых проекта в этом месяце</div>
+    <h1 class="reveal reveal-d1">Сайты, которые <span class="grad">приносят деньги</span>,<br>а не просто висят в интернете</h1>
+    <p class="lead reveal reveal-d2">Лендинги, магазины и веб-сервисы под ключ. ИИ-помощник рассчитает стоимость за минуту, а вы получите готовый сайт точно в срок.</p>
+    <div class="hero-cta reveal reveal-d3">
+      <button class="btn btn-primary" onclick="Assistant.open()"><span data-icon="spark" data-size="17"></span>Рассчитать стоимость с ИИ</button>
+      <a class="btn" href="#pricing">Смотреть тарифы</a>
+    </div>
+
+    <!-- Мокап браузера -->
+    <div class="browser-mock reveal reveal-d3">
+      <div class="browser-bar">
+        <i></i><i></i><i></i>
+        <div class="browser-url">diska.ru / ваш-будущий-сайт</div>
+      </div>
+      <div class="browser-body">
+        <div class="sk sk-title"></div>
+        <div class="sk sk-w60"></div>
+        <div class="sk sk-w45"></div>
+        <div class="sk-row">
+          <div class="sk-card"></div>
+          <div class="sk-card"></div>
+          <div class="sk-card"></div>
+        </div>
+        <div class="sk sk-w20" style="height:34px;border-radius:9px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Бегущая строка -->
+<div class="marquee">
+  <div class="marquee-track" id="marqueeTrack"></div>
+</div>
+
+<!-- Статистика -->
+<section class="stats">
+  <div class="container stats-grid">
+    <div class="stat"><div class="stat-num" id="statClients">0</div><div class="stat-label">Клиентов</div></div>
+    <div class="stat"><div class="stat-num" id="statProjects">0</div><div class="stat-label">Проектов сдано</div></div>
+    <div class="stat"><div class="stat-num" id="statReviews">0</div><div class="stat-label">Отзывов</div></div>
+    <div class="stat"><div class="stat-num" id="statRating">0.0</div><div class="stat-label">Средняя оценка</div></div>
+  </div>
+</section>
+
+<!-- Тарифы -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Тарифы</div>
+      <h2>Готовые пакеты или индивидуальный расчёт</h2>
+      <p>Финальная цена зависит от задач — ИИ-помощник соберёт смету под ваш проект, а тарифы ниже дают ориентир.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card reveal">
+        <div class="price-name">Старт</div>
+        <div class="price-desc">Лендинг или сайт-визитка для быстрого запуска</div>
+        <div class="price-val">от 12 000 <span>₽</span></div>
+        <div class="price-note">Срок: от 5 дней</div>
+        <ul class="feat-list">
+          <li>До 3 экранов, адаптив под мобильные</li>
+          <li>Форма заявок и подключение почты</li>
+          <li>Базовая SEO-настройка</li>
+          <li>Правки в течение 7 дней после сдачи</li>
+        </ul>
+        <button class="btn btn-block" onclick="Assistant.open()">Выбрать</button>
+      </div>
+      <div class="price-card featured reveal reveal-d1">
+        <div class="price-name">Бизнес</div>
+        <div class="price-desc">Корпоративный сайт или магазин с заявками</div>
+        <div class="price-val">от 39 000 <span>₽</span></div>
+        <div class="price-note">Срок: от 14 дней</div>
+        <ul class="feat-list">
+          <li>До 10 страниц с уникальным дизайном</li>
+          <li>Каталог, корзина, онлайн-оплата</li>
+          <li>Админ-панель для управления</li>
+          <li>Аналитика и SEO-продвижение</li>
+          <li>Поддержка 30 дней после запуска</li>
+        </ul>
+        <button class="btn btn-primary btn-block" onclick="Assistant.open()">Выбрать</button>
+      </div>
+      <div class="price-card reveal reveal-d2">
+        <div class="price-name">Premium</div>
+        <div class="price-desc">Веб-сервис, личные кабинеты, сложная логика</div>
+        <div class="price-val">от 120 000 <span>₽</span></div>
+        <div class="price-note">Срок: от 35 дней</div>
+        <ul class="feat-list">
+          <li>Премиум-дизайн под брендбук</li>
+          <li>Личные кабинеты и роли пользователей</li>
+          <li>Интеграции с CRM, 1С, API</li>
+          <li>Мультиязычность и высокие нагрузки</li>
+          <li>Персональный менеджер 24/7</li>
+        </ul>
+        <button class="btn btn-block" onclick="Assistant.open()">Выбрать</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Как работаем -->
+<section class="section" id="how" style="background: var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Процесс</div>
+      <h2>Четыре шага от идеи до запуска</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><div class="step-num">1</div><h3>Бриф с ИИ</h3><p>Отвечаете на вопросы помощника — он считает смету и формирует заказ.</p></div>
+      <div class="step reveal reveal-d1"><div class="step-num">2</div><h3>Оценка и сроки</h3><p>Я подтверждаю цену, называю дату старта и дедлайн — всё видно в кабинете.</p></div>
+      <div class="step reveal reveal-d2"><div class="step-num">3</div><h3>Разработка</h3><p>Дизайн, вёрстка, программирование. На связи в чате по каждому заказу.</p></div>
+      <div class="step reveal reveal-d3"><div class="step-num">4</div><h3>Запуск</h3><p>Публикуем сайт, подключаем аналитику и передаём вам доступы.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Отзывы -->
+<section class="section" id="reviews">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Отзывы клиентов</div>
+      <h2>Что говорят после сдачи проектов</h2>
+      <p>Отзывы могут оставить только клиенты с завершённым заказом. Каждый отзыв проходит проверку перед публикацией.</p>
+    </div>
+    <div class="reviews-grid" id="reviewsGrid"></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="cta-band reveal">
+      <h2>Обсудим ваш проект?</h2>
+      <p>ИИ-помощник задаст пять коротких вопросов и назовёт цену ещё до разговора со мной.</p>
+      <div class="hero-cta">
+        <button class="btn btn-primary" onclick="Assistant.open()"><span data-icon="spark" data-size="17"></span>Запустить ИИ-помощника</button>
+        <button class="btn" onclick="openModal('registerModal')">Создать аккаунт</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Футер -->
+<footer class="footer">
+  <div class="container footer-grid">
+    <a class="logo" href="/"><span class="logo-mark">d</span>diska</a>
+    <div class="footer-contacts">
+      <a class="contact-item" href="https://t.me/twoest" target="_blank" rel="noopener">
+        <span data-icon="send" data-size="17"></span>
+        <span class="contact-text">
+          <b>@twoest</b>
+          <small>Telegram для связи</small>
+        </span>
+      </a>
+      <a class="contact-item" href="mailto:diskahello@mail.ru">
+        <span data-icon="mail" data-size="17"></span>
+        <span class="contact-text">
+          <b>diskahello@mail.ru</b>
+          <small>Нет Telegram? Пишите на почту</small>
+        </span>
+      </a>
+    </div>
+    <p>Создание сайтов под ключ · 2026</p>
+  </div>
+</footer>
+
+<!-- Модалка: вход -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <button class="modal-close">×</button>
+    <h3>С возвращением</h3>
+    <p class="sub">Войдите, чтобы видеть заказы и чат</p>
+    <div class="form-error" id="loginError"></div>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input class="input" type="email" name="email" required placeholder="you@mail.ru"></div>
+      <div class="field"><label>Пароль</label><input class="input" type="password" name="password" required placeholder="••••••••"></div>
+      <button class="btn btn-primary btn-block" type="submit">Войти</button>
+    </form>
+    <div class="form-switch">Нет аккаунта? <a href="#" onclick="closeModal('loginModal');openModal('registerModal');return false;">Зарегистрироваться</a></div>
+  </div>
+</div>
+
+<!-- Модалка: регистрация -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <button class="modal-close">×</button>
+    <h3>Регистрация</h3>
+    <p class="sub">Аккаунт нужен, чтобы оформить заказ и общаться в чате</p>
+    <div class="form-error" id="regError"></div>
+    <form id="registerForm">
+      <div class="field"><label>Имя</label><input class="input" name="name" required placeholder="Как к вам обращаться"></div>
+      <div class="field"><label>Email</label><input class="input" type="email" name="email" required placeholder="you@mail.ru"></div>
+      <div class="field"><label>Пароль (минимум 6 символов)</label><input class="input" type="password" name="password" minlength="6" required placeholder="Придумайте пароль"></div>
+      <button class="btn btn-primary btn-block" type="submit">Создать аккаунт</button>
+    </form>
+    <div class="form-switch">Уже есть аккаунт? <a href="#" onclick="closeModal('registerModal');openModal('loginModal');return false;">Войти</a></div>
+  </div>
+</div>
+
+<!-- ИИ-помощник -->
+<button class="ai-fab" id="aiFab" onclick="Assistant.open()"><span data-icon="spark" data-size="18"></span>ИИ-помощник</button>
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-head">
+    <div class="ai-ava" data-icon="spark" data-size="20"></div>
+    <div style="flex:1">
+      <h4>ИИ-помощник diska</h4>
+      <span><span class="dot" style="width:7px;height:7px;border-radius:50%;background:#30a46c;display:inline-block"></span> На связи · расчёт за минуту</span>
+    </div>
+    <button class="icon-btn" onclick="Assistant.close()">×</button>
+  </div>
+  <div class="ai-body" id="aiBody"></div>
+  <div class="ai-input-row" id="aiInputRow" style="display:none">
+    <input class="input" id="aiTextInput" placeholder="Опишите задачу своими словами…">
+    <button class="btn btn-primary btn-sm" id="aiSendBtn">Отправить</button>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/assistant.js"></script>
+<script src="/js/landing.js"></script>
+</body>
+</html>

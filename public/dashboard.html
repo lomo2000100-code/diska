@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мои заказы — diska</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+  <div class="container nav">
+    <a class="logo" href="/"><span class="logo-mark">d</span>diska</a>
+    <nav class="nav-links">
+      <a href="/#pricing">Тарифы</a>
+      <a href="/#reviews">Отзывы</a>
+    </nav>
+    <div class="nav-actions" id="navSlot"></div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <h1>Мои заказы</h1>
+        <p id="welcomeLine">Загрузка…</p>
+      </div>
+      <a class="btn btn-primary" href="/#assistant"><span data-icon="plus" data-size="16"></span>Новый проект с ИИ</a>
+    </div>
+
+    <div class="tabs" id="filterTabs">
+      <button class="tab active" data-f="all">Все <span class="cnt" id="cnt-all"></span></button>
+      <button class="tab" data-f="new">Новые <span class="cnt" id="cnt-new"></span></button>
+      <button class="tab" data-f="accepted">В работе <span class="cnt" id="cnt-accepted"></span></button>
+      <button class="tab" data-f="completed">Завершённые <span class="cnt" id="cnt-completed"></span></button>
+      <button class="tab" data-f="rejected">Отклонённые <span class="cnt" id="cnt-rejected"></span></button>
+    </div>
+
+    <div id="reviewBannerSlot"></div>
+    <div id="ordersList"></div>
+  </div>
+</main>
+
+<!-- Модалка: отзыв о завершённом проекте -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal">
+    <button class="modal-close">×</button>
+    <h3>Оцените проект</h3>
+    <p class="sub" id="reviewModalSub">Ваш отзыв поможет другим клиентам выбрать diska</p>
+    <div class="form-error" id="reviewError"></div>
+    <div class="stars-pick" id="starsPick">
+      <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+    </div>
+    <div class="review-rating-label" id="ratingLabel">Отлично — очень доволен!</div>
+    <div class="field">
+      <textarea class="input" id="reviewText" rows="4" placeholder="Расскажите, как прошло сотрудничество: сроки, коммуникация, результат…"></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" id="reviewSubmit">Опубликовать отзыв</button>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админ-панель — diska</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="header">
+  <div class="container nav">
+    <a class="logo" href="/"><span class="logo-mark">d</span>diska <span style="color:var(--muted);font-size:13px;font-weight:600;margin-left:6px">admin</span></a>
+    <div class="nav-actions" id="navSlot"></div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="container">
+    <div class="page-head">
+      <div>
+        <h1>Панель управления</h1>
+        <p>Заказы клиентов, чаты и модерация</p>
+      </div>
+    </div>
+
+    <div class="admin-stats" id="adminStats"></div>
+
+    <div class="tabs" id="mainTabs">
+      <button class="tab active" data-t="orders">Заказы</button>
+      <button class="tab" data-t="clients">Клиенты</button>
+      <button class="tab" data-t="reviews">Отзывы</button>
+    </div>
+
+    <section id="tab-orders">
+      <div class="tabs" id="orderFilters" style="margin-top:0">
+        <button class="tab active" data-f="all">Все</button>
+        <button class="tab" data-f="new">Новые</button>
+        <button class="tab" data-f="accepted">В работе</button>
+        <button class="tab" data-f="completed">Завершённые</button>
+        <button class="tab" data-f="rejected">Отклонённые</button>
+      </div>
+      <div id="ordersList"></div>
+    </section>
+
+    <section id="tab-clients" style="display:none">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Имя</th><th>Email</th><th>Заказов</th><th>Регистрация</th></tr></thead>
+          <tbody id="clientsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-reviews" style="display:none">
+      <div id="reviewsList"></div>
+    </section>
+  </div>
+</main>
+
+<!-- Модалка: принять заказ -->
+<div class="modal-overlay" id="acceptModal">
+  <div class="modal">
+    <button class="modal-close">×</button>
+    <h3>Принять заказ</h3>
+    <p class="sub">Укажите цену и сроки — клиент увидит это в кабинете</p>
+    <div class="form-error" id="acceptError"></div>
+    <div class="field"><label>Финальная стоимость, ₽</label><input class="input" type="number" id="acPrice"></div>
+    <div class="field"><label>Когда займётесь (старт работ)</label><input class="input" type="date" id="acStart"></div>
+    <div class="field"><label>Дедлайн</label><input class="input" type="date" id="acDeadline"></div>
+    <div class="field"><label>Комментарий клиенту</label><textarea class="input" id="acComment" placeholder="Например: начну в понедельник, к среде пришлю макет…"></textarea></div>
+    <button class="btn btn-primary btn-block" id="acceptSubmit">Подтвердить и взять в работу</button>
+  </div>
+</div>
+
+<!-- Модалка: отказ -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <button class="modal-close">×</button>
+    <h3>Отклонить заказ</h3>
+    <p class="sub">Укажите причину — она придёт клиенту</p>
+    <div class="field"><label>Причина отказа</label>
+      <textarea class="input" id="rjReason" placeholder="Например: текущая загрузка не позволяет взять проект до конца месяца…"></textarea>
+    </div>
+    <button class="btn btn-danger btn-block" id="rejectSubmit">Отклонить заказ</button>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>
