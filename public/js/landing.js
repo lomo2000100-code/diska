@@ -30,7 +30,7 @@ async function loadReviews() {
       grid.innerHTML = `
         <div class="reviews-empty">
           <span data-icon="star" data-size="36"></span>
-          <p>Здесь появятся отзывы реальных клиентов — после завершения проектов и проверки.</p>
+          <p>Пока тут пусто — первые клиенты ещё не успели поделиться впечатлениями. Отзывы появляются только после реально сданных заказов.</p>
         </div>`;
       iconify(grid);
       return;
@@ -102,7 +102,7 @@ function bindAuthForms() {
 }
 
 function fillMarquee() {
-  const items = ['Лендинги', 'Интернет-магазины', 'Веб-сервисы', 'Уникальный дизайн', 'SEO-настройка', 'Личные кабинеты', 'Онлайн-оплата', 'Поддержка 24/7'];
+  const items = ['Лендинги под ключ', 'Интернет-магазины', 'Сайты для услуг', 'Уникальный дизайн', 'Подготовка к SEO', 'Приём оплаты на сайте', 'Формы и заявки', 'Правки включены в цену'];
   const track = document.getElementById('marqueeTrack');
   if (!track) return;
   const chunk = items.map(t => `<span>${t}</span>`).join('');

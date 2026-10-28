@@ -1,4 +1,4 @@
-/* ============ ИИ-помощник: расширенный диалог расчёта ============ */
+/* ============ ИИ-помощник diska: бриф по-человечески ============ */
 
 const Assistant = (() => {
   const panel = () => document.getElementById('aiPanel');
@@ -9,94 +9,144 @@ const Assistant = (() => {
   const QUESTIONS = [
     {
       key: 'type',
-      q: 'Привет! Я соберу техническое задание и рассчитаю стоимость. Какая задача перед нами стоит?',
+      q: 'Привет! Я помогу собрать бриф и сразу посчитаю стоимость. Для начала — какой сайт нужен?',
       options: [
-        { v: 'landing', t: 'Лендинг' },
+        { v: 'landing', t: 'Лендинг — одна продающая страница' },
         { v: 'corporate', t: 'Сайт компании' },
         { v: 'shop', t: 'Интернет-магазин' },
-        { v: 'webapp', t: 'Веб-сервис / приложение' },
+        { v: 'webapp', t: 'Веб-сервис или приложение' },
         { v: 'portfolio', t: 'Портфолио' }
       ]
     },
     {
-      key: 'niche',
-      input: true,
-      placeholder: 'Например: кофейня, юрист, магазин одежды…',
-      q: 'О чём сайт? Напишите тематику или нишу бизнеса своими словами.'
+      key: 'brand', input: true,
+      placeholder: 'Например: кофейня «Зерно»',
+      q: 'Как называется компания или проект? Если названия пока нет — напишите рабочее, потом поменяем.'
     },
     {
-      key: 'products',
-      input: true,
-      placeholder: 'Например: авторские десерты и кофе навынос…',
-      q: 'Какая у вас продукция или услуги? Перечислите главное.'
+      key: 'niche', input: true,
+      placeholder: 'Например: небольшая кофейня в спальном районе',
+      q: 'Расскажите в двух словах, чем вы занимаетесь. Своими словами, как объяснили бы знакомому.'
+    },
+    {
+      key: 'products', input: true,
+      placeholder: 'Например: кофе с собой, десерты, завтраки',
+      q: 'Что именно продаёте или какие услуги оказываете? Перечислите главное.'
+    },
+    {
+      key: 'audience', input: true,
+      placeholder: 'Например: жители района 25–40 лет, заходят по пути на работу',
+      q: 'Кто ваш клиент? Кого хотите видеть на сайте — возраст, интересы, за чем обычно приходят.'
     },
     {
       key: 'pages',
-      q: 'Сколько примерно страниц или экранов нужно?',
+      q: 'Сколько примерно страниц нужно? Если сомневаетесь — берите вариант поближе, потом расширим.',
       options: [
-        { v: '1', t: '1 (одностраничник)' },
-        { v: '3', t: '2–5' },
-        { v: '8', t: '6–10' },
+        { v: '1', t: 'Одна страница (одностраничник)' },
+        { v: '3', t: '2–5 страниц' },
+        { v: '8', t: '6–10 страниц' },
         { v: '12', t: 'Больше 10' }
       ]
     },
     {
       key: 'design',
-      q: 'Какой дизайн хотите?',
+      q: 'Какой дизайн ближе? От этого сильно зависит цена и срок.',
       options: [
-        { v: 'template', t: 'Шаблонный — быстрее и дешевле' },
-        { v: 'unique', t: 'Уникальный — с нуля' },
-        { v: 'premium', t: 'Премиум под бренд' }
+        { v: 'template', t: 'На основе шаблона — бюджетно и быстро' },
+        { v: 'unique', t: 'Уникальный, нарисуем с нуля' },
+        { v: 'premium', t: 'Премиум-уровень под бренд' }
+      ]
+    },
+    {
+      key: 'style',
+      q: 'Какое настроение у сайта? Выберите характер, который подходит бизнесу.',
+      options: [
+        { v: 'minimal', t: 'Минимализм, много воздуха' },
+        { v: 'premium', t: 'Дорого и солидно' },
+        { v: 'friendly', t: 'Тепло и дружелюбно' },
+        { v: 'bold', t: 'Ярко и смело' },
+        { v: 'classic', t: 'Классика, корпоративный стиль' }
       ]
     },
     {
       key: 'colorTheme',
-      q: 'Какой фон и цветовая тема ближе?',
+      q: 'Что с фоном и цветами?',
       options: [
-        { v: 'dark', t: 'Тёмная тема фона' },
-        { v: 'light', t: 'Светлая тема фона' },
+        { v: 'dark', t: 'Тёмный фон' },
+        { v: 'light', t: 'Светлый фон' },
         { v: 'brand', t: 'Фирменные цвета бренда' },
         { v: 'mono', t: 'Чёрно-белый минимализм' }
       ]
     },
     {
       key: 'animations',
-      q: 'Нужны ли анимации?',
+      q: 'Нужны ли анимации? Они оживляют сайт, но добавляют работу.',
       options: [
-        { v: 'none', t: 'Без анимаций' },
+        { v: 'none', t: 'Без анимаций, только самое нужное' },
         { v: 'light', t: 'Лёгкие микроанимации' },
-        { v: 'parallax', t: 'Параллакс и скролл-эффекты' },
-        { v: 'rich', t: 'Богатые анимации и интерактив' }
+        { v: 'parallax', t: 'Параллакс и эффекты при скролле' },
+        { v: 'rich', t: 'Богатый интерактив' }
       ]
     },
     {
-      key: 'features',
-      multi: true,
-      q: 'Какие функции нужны? Можно выбрать несколько, затем нажмите «Продолжить».',
+      key: 'blocks', multi: true,
+      q: 'Какие блоки должны быть на сайте? Отметьте всё нужное, потом нажмите «Продолжить».'
+    },
+    {
+      key: 'features', multi: true,
+      q: 'Теперь про функции — что сайт должен уметь делать? Тоже можно несколько вариантов.'
+    },
+    {
+      key: 'content',
+      q: 'Что с текстами?',
       options: [
-        { v: 'forms', t: 'Формы заявок' },
-        { v: 'catalog', t: 'Каталог и корзина' },
-        { v: 'payment', t: 'Онлайн-оплата' },
-        { v: 'cabinet', t: 'Личный кабинет' },
-        { v: 'blog', t: 'Блог / новости' },
-        { v: 'multi', t: 'Мультиязычность' },
-        { v: 'seo', t: 'SEO-настройка' },
-        { v: 'admin', t: 'Админ-панель' }
+        { v: 'ready', t: 'Тексты уже написаны' },
+        { v: 'partial', t: 'Что-то есть, остальное допишите вы' },
+        { v: 'copy', t: 'Напишите все тексты за меня' }
       ]
+    },
+    {
+      key: 'assets',
+      q: 'Есть ли логотип и фирменные цвета?',
+      options: [
+        { v: 'full', t: 'Да, есть логотип и цвета' },
+        { v: 'logo', t: 'Только логотип' },
+        { v: 'none', t: 'Ничего нет, сделайте с нуля' }
+      ]
+    },
+    {
+      key: 'refs', input: true, optional: true,
+      placeholder: 'Ссылки через запятую, либо напишите «нет»',
+      q: 'Может, есть сайты, которые нравятся? Киньте ссылки — это поможет попасть в ожидание. Если нет — напишите «нет».'
     },
     {
       key: 'urgency',
-      q: 'Насколько горят сроки?',
+      q: 'Последний вопрос про сроки: насколько горит?',
       options: [
         { v: 'fast', t: 'Срочно, нужно быстрее' },
         { v: 'normal', t: 'Обычные сроки' },
-        { v: 'relaxed', t: 'Не спеша, важнее цена' }
+        { v: 'relaxed', t: 'Не спешу, важнее цена' }
       ]
     }
   ];
 
+  // Динамические опции для мультивопросов (общие справочники с сервером)
+  const BLOCK_OPTIONS = [
+    ['hero', 'Первый экран с оффером'], ['about', 'О компании / о себе'],
+    ['services', 'Услуги или товары'], ['pricing', 'Цены и тарифы'],
+    ['portfolio', 'Портфолио / кейсы'], ['reviews', 'Отзывы'],
+    ['team', 'Команда'], ['faq', 'Вопросы и ответы'],
+    ['contacts', 'Контакты и карта'], ['blog', 'Блог / новости']
+  ];
+  const FEATURE_OPTIONS = [
+    ['forms', 'Формы заявок'], ['catalog', 'Каталог и корзина'],
+    ['payment', 'Онлайн-оплата'], ['cabinet', 'Личный кабинет'],
+    ['blog', 'Блог / новости'], ['multi', 'Мультиязычность'],
+    ['seo', 'SEO-настройка'], ['admin', 'Админ-панель']
+  ];
+
   function reset() {
-    state = { step: 0, answers: { features: [] }, done: false, estimate: null, budgetMode: false };
+    state = { step: 0, answers: { features: [], blocks: [] }, done: false, estimate: null };
     body().innerHTML = '';
     inputRow().style.display = 'none';
   }
@@ -130,14 +180,18 @@ const Assistant = (() => {
     const wrap = document.createElement('div');
     wrap.className = 'choices';
 
-    q.options.forEach(opt => {
+    let options = q.options;
+    if (q.key === 'blocks') options = BLOCK_OPTIONS.map(([v, t]) => ({ v, t }));
+    if (q.key === 'features') options = FEATURE_OPTIONS.map(([v, t]) => ({ v, t }));
+
+    options.forEach(opt => {
       const b = document.createElement('button');
       b.className = 'choice';
       b.textContent = opt.t;
       b.onclick = () => {
         if (q.multi) {
           b.classList.toggle('selected');
-          const arr = state.answers.features;
+          const arr = state.answers[q.key];
           const i = arr.indexOf(opt.v);
           if (i >= 0) arr.splice(i, 1); else arr.push(opt.v);
         } else {
@@ -145,7 +199,7 @@ const Assistant = (() => {
           state.answers[q.key] = opt.v;
           addMsg(opt.t, 'user');
           state.step++;
-          setTimeout(run, 300);
+          setTimeout(run, 280);
         }
       };
       wrap.appendChild(b);
@@ -158,11 +212,12 @@ const Assistant = (() => {
       next.textContent = 'Продолжить →';
       next.onclick = () => {
         disableChoices(wrap);
-        const picked = state.answers.features
-          .map(v => q.options.find(o => o.v === v)?.t).filter(Boolean).join(', ');
-        addMsg(picked || 'Без дополнительных функций', 'user');
+        const dict = q.key === 'blocks' ? BLOCK_OPTIONS : FEATURE_OPTIONS;
+        const picked = state.answers[q.key]
+          .map(v => dict.find(o => o[0] === v)?.[1]).filter(Boolean).join(', ');
+        addMsg(picked || 'Ничего не выбрано', 'user');
         state.step++;
-        setTimeout(run, 300);
+        setTimeout(run, 280);
       };
       wrap.appendChild(next);
     }
@@ -178,14 +233,15 @@ const Assistant = (() => {
     input.value = '';
     input.focus();
     const send = () => {
-      const val = input.value.trim();
+      let val = input.value.trim();
       if (val.length < 2) { input.focus(); return; }
-      addMsg(escapeHtml(val), 'user');
-      state.answers[q.key] = val.slice(0, 300);
+      if (q.optional && /^(нет|нету|пропустить|no)$/i.test(val)) val = '';
+      addMsg(escapeHtml(input.value.trim() || '—'), 'user');
+      state.answers[q.key] = val.slice(0, 400);
       inputRow().style.display = 'none';
       input.placeholder = 'Опишите задачу своими словами…';
       state.step++;
-      setTimeout(run, 300);
+      setTimeout(run, 280);
     };
     document.getElementById('aiSendBtn').onclick = send;
     input.onkeydown = e => { if (e.key === 'Enter') send(); };
@@ -197,17 +253,17 @@ const Assistant = (() => {
       state.estimate = await API.post('/api/assistant/estimate', state.answers);
     } catch (e) {
       t.remove();
-      addMsg('Не удалось рассчитать смету: ' + e.message);
-      return;
+      addMsg('Техническая заминка со сметой: ' + e.message + '. Попробуйте ещё раз чуть позже.');
+      throw e;
     }
     t.remove();
     const est = state.estimate;
     const el = document.createElement('div');
     el.className = 'msg estimate';
     el.innerHTML = `
-      <b>Смета по вашим ответам:</b>
+      <b>Посчитал. Вот честная смета по вашим ответам:</b>
       <div class="est-price">${fmtPrice(est.priceMin)} — ${fmtPrice(est.priceMax)}</div>
-      <div class="est-meta">Примерный срок: ~${est.approxDays} раб. дней. Ниже минимальной суммы проект взять не получится.</div>
+      <div class="est-meta">Примерно ${est.approxDays} рабочих дней. Дешевле минимума этот проект не собрать — но в эту сумму уже входит всё перечисленное.</div>
       <div class="est-list">${est.summary.map(s => `· ${escapeHtml(s)}`).join('')}</div>`;
     body().appendChild(el);
     scrollDown();
@@ -216,14 +272,14 @@ const Assistant = (() => {
   function askBudget() {
     const est = state.estimate;
     const opt = Math.round((est.priceMin + est.priceMax) / 2 / 1000) * 1000;
-    addMsg(`На какую сумму вы рассчитываете? Минимальный порог по этому ТЗ — <b>${fmtPrice(est.priceMin)}</b>.`);
+    addMsg(`На какую сумму рассчитываете? Меньше <b>${fmtPrice(est.priceMin)}</b> взять не получится, а выше ${fmtPrice(est.priceMax)} смысла нет — потолок студии 100 000 ₽.`);
     const wrap = document.createElement('div');
     wrap.className = 'choices';
     const tiers = [
       { v: est.priceMin, t: `Минимум — ${fmtPrice(est.priceMin)}` },
       { v: opt, t: `Оптимум — ${fmtPrice(opt)}` },
-      { v: est.priceMax, t: `Максимум — ${fmtPrice(est.priceMax)}` },
-      { v: 'custom', t: 'Своя сумма' }
+      { v: est.priceMax, t: `Верхняя граница — ${fmtPrice(est.priceMax)}` },
+      { v: 'custom', t: 'Введу свою сумму' }
     ];
     tiers.forEach(o => {
       const b = document.createElement('button');
@@ -237,7 +293,7 @@ const Assistant = (() => {
           disableChoices(wrap);
           state.answers.budget = o.v;
           addMsg(o.t, 'user');
-          setTimeout(finish, 300);
+          setTimeout(finish, 280);
         }
       };
       wrap.appendChild(b);
@@ -247,7 +303,7 @@ const Assistant = (() => {
   }
 
   function customBudget() {
-    addMsg('Введите сумму в рублях одним числом (например, 50000).');
+    addMsg('Напишите сумму в рублях одним числом, например 50000.');
     inputRow().style.display = 'flex';
     const input = document.getElementById('aiTextInput');
     input.placeholder = 'Сумма в рублях…';
@@ -255,10 +311,17 @@ const Assistant = (() => {
     input.focus();
     const send = () => {
       const val = parseInt(input.value.replace(/\D/g, ''), 10);
-      if (!val || val <= 0) { addMsg('Введите положительное число.'); input.focus(); return; }
+      if (!val || val <= 0) { addMsg('Похоже, это не число. Напишите сумму цифрами, например 50000.'); input.focus(); return; }
       if (val < state.estimate.priceMin) {
-        addMsg(String(val.toLocaleString('ru-RU')) + ' ₽', 'user');
-        addMsg(`Не получится: минимум по вашим требованиям — ${fmtPrice(state.estimate.priceMin)}. Можно уменьшить функции или упростить дизайн, либо подтвердить минимальную сумму. Введите сумму ещё раз.`);
+        addMsg(fmtPrice(val), 'user');
+        addMsg(`Столько не выйдет: минимум под ваши требования — ${fmtPrice(state.estimate.priceMin)}. Можно убрать часть функций или упростить дизайн, либо ввести сумму от минимума.`);
+        input.value = '';
+        input.focus();
+        return;
+      }
+      if (val > 100000) {
+        addMsg(fmtPrice(val), 'user');
+        addMsg('Выше 100 000 ₽ мы не берём — назовите сумму в пределах сметы.');
         input.value = '';
         input.focus();
         return;
@@ -267,7 +330,7 @@ const Assistant = (() => {
       state.answers.budget = val;
       inputRow().style.display = 'none';
       input.placeholder = 'Опишите задачу своими словами…';
-      setTimeout(finish, 300);
+      setTimeout(finish, 280);
     };
     document.getElementById('aiSendBtn').onclick = send;
     input.onkeydown = e => { if (e.key === 'Enter') send(); };
@@ -275,7 +338,7 @@ const Assistant = (() => {
 
   async function finish() {
     if (!Auth.user) {
-      addMsg('Чтобы оформить заказ, нужно войти или зарегистрироваться — это займёт минуту. После входя я сразу отправлю заказ с готовым промтом.');
+      addMsg('Почти всё. Чтобы оформить заказ, нужен аккаунт — регистрация займёт минуту. После входа бриф и смета никуда не денутся, я сразу отправлю заказ.');
       openModal('registerModal');
       sessionStorage.setItem('pendingOrder', JSON.stringify({ answers: state.answers, estimate: state.estimate }));
       return;
@@ -283,14 +346,14 @@ const Assistant = (() => {
     const t = addTyping();
     try {
       const order = await API.post('/api/orders', {
-        title: 'Заказ через ИИ-помощника',
+        title: 'Бриф из ИИ-помощника',
         brief: state.estimate.summary.join('; '),
         answers: state.answers,
         estimate: state.estimate
       });
       t.remove();
       state.done = true;
-      addMsg(`Заказ #${order.id} оформлен. Специалист получит готовый промт и смету, подтвердит сроки. Можете сразу открыть чат по заказу и прикрепить файлы — фото, референсы, макеты.`);
+      addMsg(`Готово, заказ №${order.id} у меня. Я уже собрал по вашим ответам техническое задание для разработки — посмотрю его, подтвержу сроки и цену. Если есть фото, референсы или документы — прикрепите их в чате заказа, так результат будет точнее.`);
       const el = document.createElement('div');
       el.className = 'choices';
       el.innerHTML = `
@@ -301,7 +364,7 @@ const Assistant = (() => {
       scrollDown();
     } catch (e) {
       t.remove();
-      addMsg('Ошибка: ' + e.message);
+      addMsg('Не получилось оформить: ' + e.message);
     }
   }
 
@@ -310,7 +373,7 @@ const Assistant = (() => {
       const q = QUESTIONS[state.step];
       q.input ? askInput(q) : askChoices(q);
     } else if (!state.estimate) {
-      showEstimate().then(() => askBudget());
+      showEstimate().then(askBudget).catch(() => {});
     }
   }
 
@@ -320,10 +383,10 @@ const Assistant = (() => {
       document.getElementById('aiFab').style.display = 'none';
       if (!state || state.done) {
         reset();
-        addMsg('Расскажите о проекте — или напишите «старт», и я задам несколько коротких вопросов для точного расчёта.');
+        addMsg('Расскажите, какой сайт нужен — или просто напишите «старт», и я проведу вас по коротким вопросам, а в конце назову точную цену.');
         inputRow().style.display = 'flex';
         const input = document.getElementById('aiTextInput');
-        input.placeholder = 'Опишите задачу своими словами…';
+        input.placeholder = 'Пара слов о проекте…';
         input.value = '';
         input.focus();
         const send = () => {
@@ -332,7 +395,7 @@ const Assistant = (() => {
           addMsg(escapeHtml(val), 'user');
           inputRow().style.display = 'none';
           state.step = 0;
-          setTimeout(run, 300);
+          setTimeout(run, 280);
         };
         document.getElementById('aiSendBtn').onclick = send;
         input.onkeydown = e => { if (e.key === 'Enter') send(); };

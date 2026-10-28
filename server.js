@@ -207,7 +207,7 @@ const PRICING = {
     landing: { label: 'Лендинг', base: 12000, days: 5 },
     corporate: { label: 'Корпоративный сайт', base: 39000, days: 14 },
     shop: { label: 'Интернет-магазин', base: 69000, days: 21 },
-    webapp: { label: 'Веб-приложение / сервис', base: 120000, days: 35 },
+    webapp: { label: 'Веб-приложение / сервис', base: 90000, days: 35 },
     portfolio: { label: 'Портфолио', base: 20000, days: 7 }
   },
   pages: { '1': 1, '3': 3, '8': 8, '12': 12 },
@@ -242,8 +242,39 @@ const PRICING = {
     light: 'Светлая тема фона',
     brand: 'Фирменные цвета бренда',
     mono: 'Чёрно-белый минимализм'
+  },
+  style: {
+    minimal: 'Минимализм, воздух и строгая типографика',
+    premium: 'Дорогой премиальный стиль',
+    friendly: 'Тёплый и дружелюбный',
+    bold: 'Яркий, смелый, акцентный',
+    classic: 'Классический корпоративный'
+  },
+  blocks: {
+    hero: 'Первый экран с оффером',
+    about: 'О компании / о себе',
+    services: 'Услуги или товары',
+    pricing: 'Цены / тарифы',
+    portfolio: 'Портфолио / кейсы',
+    reviews: 'Отзывы клиентов',
+    team: 'Команда',
+    faq: 'Вопросы и ответы',
+    contacts: 'Контакты и карта',
+    blog: 'Блог / новости'
+  },
+  content: {
+    ready: 'Тексты уже готовы',
+    partial: 'Часть текстов есть, остальное напишете вы',
+    copy: 'Нужны тексты под ключ (копирайтинг)'
+  },
+  assets: {
+    full: 'Есть логотип и фирменные цвета',
+    logo: 'Только логотип',
+    none: 'Ничего нет — нужна разработка с нуля'
   }
 };
+
+const PRICE_CAP = 100000; // максимальный ценник студии
 
 app.post('/api/assistant/estimate', (req, res) => {
   const a = req.body || {};
@@ -253,6 +284,7 @@ app.post('/api/assistant/estimate', (req, res) => {
   const design = PRICING.design[a.design] || PRICING.design.template;
   const urgency = PRICING.urgency[a.urgency] || PRICING.urgency.normal;
   const feats = Array.isArray(a.features) ? a.features.filter(f => PRICING.features[f]) : [];
+  const blocks = Array.isArray(a.blocks) ? a.blocks.filter(b => PRICING.blocks[b]) : [];
   const anim = PRICING.animations[a.animations] || PRICING.animations.none;
 
   let price = t.base;
@@ -263,21 +295,32 @@ app.post('/api/assistant/estimate', (req, res) => {
   days += design.days;
   price += anim.add;
   days += anim.days;
+  if (blocks.length > 4) { price += (blocks.length - 4) * 1500; days += 1; }
+  if (a.content === 'copy') { price += 6000; days += 2; }
+  if (a.assets === 'none') { price += 4000; days += 1; }
   feats.forEach(f => { price += PRICING.features[f].add; days += PRICING.features[f].days; });
   price = price * urgency.multiplier;
   days = Math.max(3, Math.round(days * urgency.daysMult));
 
-  const min = round1000(price * 0.9);
-  const max = round1000(price * 1.15);
+  // Жёсткий потолок стоимости — 100 000 ₽
+  let max = Math.min(round1000(price * 1.15), PRICE_CAP);
+  let min = round1000(price * 0.9);
+  if (min >= max) min = round1000(max * 0.85);
+
   const summary = [
     `Тип: ${t.label}`,
+    a.brand ? `Название: ${String(a.brand).slice(0, 120)}` : null,
     a.niche ? `Тематика: ${String(a.niche).slice(0, 120)}` : null,
     a.products ? `Продукция/услуги: ${String(a.products).slice(0, 120)}` : null,
     `Страниц: ~${pages}`,
     `Дизайн: ${design.label}`,
+    `Стиль: ${PRICING.style[a.style] || 'На усмотрение дизайнера'}`,
     `Фон/тема: ${PRICING.colorTheme[a.colorTheme] || 'Не указано'}`,
     `Анимации: ${anim.label}`,
+    blocks.length ? `Блоки: ${blocks.map(b => PRICING.blocks[b]).join(', ')}` : null,
     feats.length ? `Функции: ${feats.map(f => PRICING.features[f].label).join(', ')}` : 'Без доп. функций',
+    a.content ? `Тексты: ${PRICING.content[a.content] || ''}` : null,
+    a.assets ? `Бренд-материалы: ${PRICING.assets[a.assets] || ''}` : null,
     `Сроки: ${urgency.label}`,
     a.budget ? `Бюджет клиента: ${Number(a.budget).toLocaleString('ru-RU')} ₽` : null
   ].filter(Boolean);
@@ -286,25 +329,62 @@ app.post('/api/assistant/estimate', (req, res) => {
 
 /* ---------------- Промт для генерации сайта в ИИ ---------------- */
 
+function plural(n, forms) {
+  const n10 = n % 10, n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return forms[0];
+  if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return forms[1];
+  return forms[2];
+}
+
 function buildPrompt(answers, estimate) {
-  const t = PRICING.type[answers.type]?.label || 'Сайт';
-  const lines = [
-    `ЗАДАЧА: разработать веб-сайт — ${t}.`,
-    answers.niche ? `ТЕМАТИКА/НИША: ${answers.niche}.` : null,
-    answers.products ? `ПРОДУКЦИЯ И УСЛУГИ: ${answers.products}.` : null,
-    `ОБЪЁМ: ориентировочно ${PRICING.pages[answers.pages] || 1} страниц(ы).`,
-    `ДИЗАЙН: ${PRICING.design[answers.design]?.label || 'шаблонный'}.`,
-    `ФОН И ЦВЕТОВАЯ ТЕМА: ${PRICING.colorTheme[answers.colorTheme] || 'на усмотрение дизайнера'}.`,
-    `АНИМАЦИИ: ${PRICING.animations[answers.animations]?.label || 'без анимаций'}.`,
-    Array.isArray(answers.features) && answers.features.length
-      ? `НУЖНЫЙ ФУНКЦИОНАЛ: ${answers.features.map(f => PRICING.features[f]?.label).filter(Boolean).join('; ')}.`
-      : 'ДОПОЛНИТЕЛЬНЫЙ ФУНКЦИОНАЛ: не требуется.',
-    estimate ? `ОРИЕНТИР ПО СРОКУ: ${estimate.approxDays} рабочих дней.` : null,
-    answers.budget ? `БЮДЖЕТ КЛИЕНТА: ${Number(answers.budget).toLocaleString('ru-RU')} ₽ (нижняя граница по смете: ${estimate?.priceMin?.toLocaleString('ru-RU')} ₽).` : null,
-    '',
-    'ТРЕБОВАНИЯ К РЕЗУЛЬТАТУ: адаптивная вёрстка под мобильные и десктоп, современный минималистичный UI, чёткая структура и призывы к действию, чистый HTML/CSS/JS, готовый к размещению на хостинге. Отдай результат набором файлов для упаковки в ZIP.'
-  ].filter(Boolean);
-  return lines.join('\n');
+  const t = PRICING.type[answers.type]?.label || 'сайт';
+  const pages = PRICING.pages[answers.pages] || 1;
+  const pagesWord = plural(pages, ['страница', 'страницы', 'страниц']);
+  const blocks = Array.isArray(answers.blocks) ? answers.blocks.map(b => PRICING.blocks[b]).filter(Boolean) : [];
+  const feats = Array.isArray(answers.features) ? answers.features.map(f => PRICING.features[f]?.label).filter(Boolean) : [];
+  const clip = (v, n = 400) => String(v || '').trim().slice(0, n);
+
+  return `Ты — веб-дизайнер и фронтенд-разработчик. Собери готовый одностраничный/многостраничный сайт под задачу клиента. Верни полный код файлами (index.html, style.css, script.js, при необходимости дополнительные страницы), который можно сразу открыть в браузере и упаковать в ZIP.
+
+=== О ПРОЕКТЕ ===
+Тип сайта: ${t}.
+Название компании/проекта: ${clip(answers.brand) || 'не указано — придумай лаконичное рабочее название'}.
+Сфера деятельности: ${clip(answers.niche) || 'универсальный бизнес'}.
+Что предлагает клиент (товары/услуги): ${clip(answers.products) || 'опиши правдоподобные услуги под указанную сферу'}.
+Целевая аудитория: ${clip(answers.audience) || 'определи сам: возраст, потребности, боли и возражения типичных клиентов этой сферы'}.
+
+=== СТРУКТУРА ===
+Объём: около ${pages} ${pagesWord} (экранов).
+Обязательные блоки: ${blocks.length ? blocks.join('; ') : 'первый экран с оффером, услуги, преимущества, отзывы, контакты'}.
+У каждого блока — понятный заголовок, продающий текст и призыв к действию. Логика страницы: зацепить → показать выгоду → доказать надежду → снять возражения → оставить заявку.
+
+=== ВИЗУАЛЬНЫЙ СТИЛЬ ===
+Подход к дизайну: ${PRICING.design[answers.design]?.label || 'аккуратный шаблонный'}.
+Характер стиля: ${PRICING.style[answers.style] || 'современный минимализм'}.
+Фон и цветовая тема: ${PRICING.colorTheme[answers.colorTheme] || 'на твой выбор, сочетай не больше 2–3 цветов'}.
+Анимации: ${PRICING.animations[answers.animations]?.label || 'без навязчивых эффектов'}.
+Бренд-материалы клиента: ${PRICING.assets[answers.assets] || 'нет — используй аккуратную типографику и нейтральные иконки'}.
+Шрифты: современные системные или Google Fonts, хороший контраст, читабельный кегль.
+
+=== ФУНКЦИОНАЛ ===
+Нужные механики: ${feats.length ? feats.join('; ') : 'достаточно формы заявки и контактов'}.
+Форма заявки: имя, телефон/почта, сообщение; кнопка заметная, с сообщением об успешной отправке.
+Тексты: ${PRICING.content[answers.content] || 'напиши живые человеческие тексты без канцелярита и воды'}.
+Референсы клиента: ${clip(answers.refs) || 'нет'}.
+
+=== ТЕХНИЧЕСКИЕ ТРЕБОВАНИЯ ===
+- Чистые HTML, CSS и ванильный JavaScript без тяжёлых фреймворков.
+- Полный адаптив: мобильные (360–430px), планшеты, десктоп; меню сворачивается в бургер на телефоне.
+- Семантическая разметка, доступность, alt у изображений, заголовки по иерархии h1–h3.
+- Плавные ховеры, аккуратные отступы, единый ритм секций, никакого визуального шума.
+- Заглушки картинок — через нейтральные плейсхолдеры/SVG, без битых ссылок.
+- Код прокомментирован по секциям, файлы готовы к загрузке на хостинг как есть.
+
+=== ОГРАНИЧЕНИЯ ПО ПРОЕКТУ ===
+Ориентир по сроку разработки: ${estimate?.approxDays || '—'} рабочих дней.
+Бюджет клиента: ${answers.budget ? Number(answers.budget).toLocaleString('ru-RU') + ' ₽' : 'не указан'}; смета студии: ${estimate ? estimate.priceMin.toLocaleString('ru-RU') + '–' + estimate.priceMax.toLocaleString('ru-RU') + ' ₽' : '—'}.
+
+Сначала коротко перечисли, какие страницы и блоки войдут в сборку, затем выдай полный код каждого файла.`;
 }
 
 /* ---------------- Заказы ---------------- */
