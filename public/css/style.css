@@ -793,3 +793,79 @@ h1 { letter-spacing: -2.2px; }
 
 /* Кнопка скачивания ZIP не сжимается на узких экранах */
 .deliverable-btn { white-space: normal; line-height: 1.4; }
+
+/* ============ diska v5.0 — фиксы мобильных и выбора вариантов ============ */
+
+/* Варианты ответов: выбор и наведение разделены, на тач-экранах hover не липнет */
+.choice { position: relative; user-select: none; -webkit-tap-highlight-color: transparent; }
+.choice.selected {
+  background: var(--inverse);
+  color: var(--on-inverse);
+  border-color: var(--inverse);
+  padding-left: 38px;
+}
+[data-theme="dark"] .choice.selected { background: #fff; color: #0a0a0a; border-color: #fff; }
+.choice.selected::before {
+  content: '✓';
+  position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+  font-weight: 800; font-size: 14px;
+}
+.choice:disabled { opacity: .55; cursor: default; }
+.choice:active { transform: scale(.97); }
+@media (hover: hover) {
+  .choice:hover { background: var(--inverse); color: var(--on-inverse); border-color: var(--inverse); }
+  [data-theme="dark"] .choice:hover { background: #fff; color: #0a0a0a; border-color: #fff; }
+}
+
+/* Кнопка ИИ-помощника не прячется под панель браузера на телефоне */
+.ai-fab { z-index: 70; }
+@media (max-width: 760px) {
+  .ai-fab {
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    right: calc(16px + env(safe-area-inset-right));
+    box-shadow: 0 12px 34px rgba(0,0,0,.45);
+  }
+}
+
+/* Панель ИИ — гарантированный фуллскрин на мобильных */
+@media (max-width: 760px) {
+  .ai-panel {
+    position: fixed;
+    inset: 0;
+    top: 0; right: 0; bottom: 0; left: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    z-index: 200;
+  }
+  .ai-head {
+    min-height: 60px;
+    padding-top: calc(14px + env(safe-area-inset-top));
+    padding-bottom: 12px;
+  }
+  .ai-body {
+    height: auto;
+    padding-bottom: 24px;
+  }
+  .ai-input-row {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Шапка на узких экранах: компактнее, ничего не наползает */
+@media (max-width: 600px) {
+  .nav-actions { gap: 6px; }
+  .nav-actions .btn { padding: 8px 11px; font-size: 12.5px; }
+  .avatar-chip { padding: 4px 10px 4px 4px; font-size: 12.5px; gap: 7px; }
+}
+@media (max-width: 420px) {
+  .avatar-chip .avatar { width: 28px; height: 28px; }
+  .nav-actions .btn-ghost, .avatar-chip > :not(.avatar) { display: none; }
+}
+
+/* Скролл чата плавный, новые сообщения видны сразу */
+.chat-box, .ai-body { overscroll-behavior: contain; }

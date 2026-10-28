@@ -107,10 +107,10 @@ const Assistant = (() => {
     },
     {
       key: 'assets',
-      q: 'Есть ли логотип и фирменные цвета?',
+      q: 'Есть ли логотип и фирменные цвета? Если есть — после оформления пришлёте их файлами в чат заказа, это удобнее, чем описывать словами.',
       options: [
-        { v: 'full', t: 'Да, есть логотип и цвета' },
-        { v: 'logo', t: 'Только логотип' },
+        { v: 'full', t: 'Да, есть логотип и цвета — пришлю в чат' },
+        { v: 'logo', t: 'Только логотип — скину файлом' },
         { v: 'none', t: 'Ничего нет, сделайте с нуля' }
       ]
     },
@@ -151,7 +151,21 @@ const Assistant = (() => {
     inputRow().style.display = 'none';
   }
 
-  const scrollDown = () => { body().scrollTop = body().scrollHeight; };
+  // Надёжный скролл вниз: rAF + отложенный повтор (клавиатура, картинки, долгий рендер)
+  const scrollDown = () => {
+    const b = body();
+    if (!b) return;
+    requestAnimationFrame(() => {
+      b.scrollTop = b.scrollHeight;
+      setTimeout(() => { b.scrollTop = b.scrollHeight; }, 60);
+    });
+  };
+
+  // Подсказки после конкретных вопросов
+  const HINTS = {
+    assets: 'Логотип, фирменные цвета и любые макеты пришлёте файлами в чат заказа — фото, архивы и документы тоже подойдут, до 25 МБ.',
+    refs: 'Ссылки сохранил. Если позже найдёте ещё примеры — просто скиньте их в чат заказа.'
+  };
 
   function addMsg(html, cls = 'bot') {
     const el = document.createElement('div');
@@ -198,8 +212,9 @@ const Assistant = (() => {
           disableChoices(wrap);
           state.answers[q.key] = opt.v;
           addMsg(opt.t, 'user');
+          if (HINTS[q.key]) setTimeout(() => addMsg(escapeHtml(HINTS[q.key])), 320);
           state.step++;
-          setTimeout(run, 280);
+          setTimeout(run, HINTS[q.key] ? 620 : 280);
         }
       };
       wrap.appendChild(b);
@@ -375,6 +390,16 @@ const Assistant = (() => {
     } else if (!state.estimate) {
       showEstimate().then(askBudget).catch(() => {});
     }
+  }
+
+  // На телефоне при открытии клавиатуры панель должна оставаться прижатой к низу диалога
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      if (panel().classList.contains('open')) scrollDown();
+    });
+    window.visualViewport.addEventListener('scroll', () => {
+      if (panel().classList.contains('open')) scrollDown();
+    });
   }
 
   return {

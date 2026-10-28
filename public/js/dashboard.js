@@ -248,6 +248,7 @@ if (me) {
     }
   };
 
+  const chatSignatures = {};
   async function loadMessages(id) {
     if (!openChats.has(id)) return;
     try {
@@ -255,9 +256,13 @@ if (me) {
       const box = document.querySelector(`.order-card[data-id="${id}"] #chatBox`);
       if (!box) return;
       if (!msgs.length) {
-        box.innerHTML = '<div class="chat-empty">Сообщений пока нет — напишите первым</div>';
+        box.innerHTML = '<div class="chat-empty">Сообщений пока нет — напишите первым или прикрепите файл</div>';
+        chatSignatures[id] = '';
         return;
       }
+      const signature = msgs.map(m => m.id + (m.attachment ? m.attachment.storedName : '')).join('|');
+      if (signature === chatSignatures[id]) return; // ничего нового — не мерцаем
+      chatSignatures[id] = signature;
       box.innerHTML = msgs.map(m => {
         const mine = m.senderRole === 'client';
         return `<div class="chat-msg ${mine ? 'out' : 'in'}">
@@ -268,7 +273,10 @@ if (me) {
         </div>`;
       }).join('');
       iconify(box);
-      box.scrollTop = box.scrollHeight;
+      requestAnimationFrame(() => {
+        box.scrollTop = box.scrollHeight;
+        setTimeout(() => { box.scrollTop = box.scrollHeight; }, 300); // догрузка картинок
+      });
     } catch (e) { /* тихо */ }
   }
 
